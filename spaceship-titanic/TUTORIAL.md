@@ -109,4 +109,53 @@ raw model tuning. A plain model on the raw columns typically scores ~0.79.
 **Next:** tune / add XGBoost + ensemble, engineer group-fate features, then the
 wildlife translation (`wildlife_translation/`).
 
+### Step 4 — Model iteration: richer features, XGBoost, ensemble (`src/03_models_ensemble.py`)
+
+Expanded the feature set from 24 → 39 (`features.py`), added a second model
+(XGBoost), and blended.
+
+**v2 features added:**
+- Spend *structure*: `LuxurySpend` (RoomService+Spa+VRDeck) vs `BasicSpend`
+  (FoodCourt+ShoppingMall), `NumSpentCats`, per-amenity `_spent` flags.
+- Age: `IsChild` (<13).
+- `CabinRegion` (cabin number bucketed along the ship).
+- Group aggregates (leak-safe): `GroupSpendMean`, `GroupCryoRate`, `GroupAgeMean`.
+
+**v3 features added — group-based imputation:** fill missing `HomePlanet`
+(from Group, then Surname), `Destination`, `Deck`, `Side` from the most common
+value among groupmates. Structurally justified (a group shares a home planet),
+not a global guess.
+
+**Results (5-fold stratified CV, same splits throughout):**
+
+| Model | CV accuracy | Public LB |
+|-------|-------------|-----------|
+| LightGBM, v1 features (baseline) | 0.8108 | 0.80547 |
+| LightGBM, v2+v3 features | 0.8121 | — |
+| XGBoost, v2+v3 features | 0.8094 | — |
+| **Blend (0.8·LGB + 0.2·XGB), v2** | 0.8126 | 0.80383 |
+| **Blend, v3 (group imputation)** | **0.8127** | 0.80547 |
+
+**The key lesson (write this big in the tutorial):** CV rose from 0.8108 to
+0.8127, but the **public leaderboard stayed flat at ~0.805** (0.80547 / 0.80383 /
+0.80547). The public LB is scored on only ~half the test set, so differences of
+~0.002 are **~3 passengers — pure noise.** *Trust cross-validation, not
+leaderboard wiggles.* We deliberately did **not** keep resubmitting to chase the
+noise.
+
+**Feature importance (LightGBM, gain-based), top features:**
+`Num`, `GroupAgeMean`, `Age`, `LuxurySpend`, `GroupSpendMean`, `FamilySize`,
+`TotalSpend`, `Deck`, `BasicSpend`, spend amenities.
+- Our **engineered group features rank near the top** → the effort paid off.
+- **`CryoSleep` is absent from the top 12** despite being the strongest single
+  predictor in EDA. Reason: the spend features are near-perfect proxies (asleep
+  ⇒ zero spend), so its signal is absorbed. **Importance ≠ predictive value when
+  features are correlated** — a caution that matters doubly in ecology, where
+  covariates like canopy cover and NDVI are collinear.
+
+**Where the model plateaued:** gradient boosting on these features tops out
+around **0.812 CV**. Further gains would need materially different methods
+(pseudo-labeling, neural nets, heavy tuning) with rising overfitting risk and
+diminishing returns — a good place to stop optimizing and start translating.
+
 <!-- Next steps get appended below as we go. -->
