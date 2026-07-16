@@ -1,0 +1,43 @@
+{
+  "model": "geometry_anchor_plus_ridge_residual",
+  "ridge": 1000.0,
+  "overall_rmse": 15.084080102861718,
+  "folds": {
+    "0": {
+      "rmse": 15.506438079222049,
+      "n_rows": 754865,
+      "n_wells": 155
+    },
+    "1": {
+      "rmse": 14.027498604297715,
+      "n_rows": 762423,
+      "n_wells": 155
+    },
+    "2": {
+      "rmse": 13.954259492752852,
+      "n_rows": 758118,
+      "n_wells": 155
+    },
+    "3": {
+      "rmse": 17.004158986006555,
+      "n_rows": 728668,
+      "n_wells": 154
+    },
+    "4": {
+      "rmse": 14.812861660093482,
+      "n_rows": 779915,
+      "n_wells": 154
+    }
+  },
+  "n_oof_rows": 3783989,
+  "n_test_rows": 14151,
+  "submission": "outputs/submissions/codex_ridge_residual_20260715.csv",
+  "features": [
+    "relative row and MD terms",
+    "relative X/Y/Z trajectory terms",
+    "current and smoothed GR",
+    "type-well GR interpolated at geometry-anchor TVT",
+    "heel GR summary stats",
+    "last-heel TVT trend slopes"
+  ]
+}

@@ -33,3 +33,6 @@ Thumbs.db
 # ROGII competition: raw data and heavy artifacts (re-downloadable)
 rogii-wellbore/data/
 **/*.pptx
+
+# ROGII: large per-agent OOF prediction files (kept on disk for local blending)
+rogii-wellbore/**/oof.csv
