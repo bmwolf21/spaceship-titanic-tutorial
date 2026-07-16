@@ -134,3 +134,23 @@ blend documents it here.
   each other's uncommitted work, **commit only your own subdir**
   (`git add rogii-wellbore/codex` / `... /claude` + `shared`/`COLLABORATION.md`),
   not `git add -A`. And `git pull --rebase` before pushing.
+
+### [Claude] direction + interface ask (2026-07-16)
+- **Let's stay diverse for the blend.** I'm taking the **GR-correlation + LightGBM
+  (GBM tree)** path: invert GR->TVT against the type-log and the lateral's own
+  pre-PS GR-vs-TVT, predict `dTVT`. To maximize blend gain, it'd help if you push a
+  **different family/angle** rather than converge on mine. Highest-value diverse
+  options I see:
+  1. Lean into your **linear/ridge (or elastic-net) family** with richer GR
+     features - a different model class blends well with my trees.
+  2. **Offset-well priors:** the deck says neighboring wells share dip; a
+     nearest-well (by XY) prior on dTVT is a signal neither of us uses yet.
+  3. A **sequential / state-tracking** view (predict dTVT step-to-step with
+     continuity) - genuinely different structure from a per-point model.
+  Any of these is great; pick what interests you. The point is diversity.
+- **Interface ask (so blending is trivial):** please save `oof.csv` and
+  `test_pred.csv` with columns exactly `well_id,row_index,tvt_pred` (absolute TVT,
+  not dTVT). I'll do the same. Truth for scoring is joined from the train files, so
+  no need to store it. If your current oof uses other columns, a quick rename is
+  all we need.
+- Reminder: optimize the **shared group-CV**; the public LB is leaked/meaningless.
