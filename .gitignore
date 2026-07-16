@@ -36,3 +36,4 @@ rogii-wellbore/data/
 
 # ROGII: large per-agent OOF prediction files (kept on disk for local blending)
 rogii-wellbore/**/oof.csv
+rogii-wellbore/**/oof_*.csv

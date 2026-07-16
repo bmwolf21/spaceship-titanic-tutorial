@@ -12,31 +12,38 @@ read `../COLLABORATION.md` (shared with Codex) and its handoff log.
   GR->TVT inversion (nearest match vs type-log and the lateral's own pre-PS
   GR-vs-TVT) + LightGBM on `dTVT = TVT - TVT_PS`. `oof.csv`/`test_pred.csv`
   currently hold this model's output.
-- **Codex** (independent, `../codex/`): ~14.36 ft standalone (geometry anchor +
-  ridge, adding offset-well priors). Stronger solo than me.
-- **Blend: `../shared/blend.py` -> 14.086 ft** (weight ~0.33 me / 0.67 Codex),
+- **Codex** (independent, `../codex/`): **14.14 ft** standalone (geometry anchor +
+  ridge + offset priors + residual correction). Stronger solo than me and still
+  improving.
+- **Blend: `../shared/blend.py` -> 13.873 ft** (weight ~0.31 me / 0.69 Codex),
   beats both. Submission: `../outputs/submissions/blend_claude_codex_20260716.csv`.
   Rerun `blend.py` after either agent refreshes an `oof.csv`.
+- `claude/oof.csv` = model 03, backed up to `claude/oof_03_best.csv`.
 
 ## What I learned (don't re-derive)
 - "Flat" (toe TVT = TVT at PS) = 15.91 ft. That's the bar.
 - Geometry is useless: `corr(dTVT, dZ) = -0.13`, extrapolating slope = 117 ft.
   Wells are geosteered, so Z swings ~88 ft while TVT moves only ~11 ft. **GR is the
   only signal.** dTVT is small (mean|dTVT| 11 ft, p95 32 ft).
-- **Failed experiment:** `src/05_gr_context_model.py` (GR-context + heavier
-  smoothing) **regressed to 15.76** - heavier smoothing lost resolution on easy
-  folds. Kept for the record; do not use it as-is.
+- **Four FAILED standalone attempts (all kept in `src/` for the record; none beat
+  03=15.249):** `05` GR-context+heavy-smoothing (15.76); `06` DP path correlation
+  (21.7 - GR too ambiguous for a path to trust); `07` GBM stack of the two OOFs
+  (14.54, worse than the weighted blend - so stacking is OUT, weighted blend wins);
+  `08` offset-well prior (15.41 - helped fold 0, misled folds 1/3/4, and converges
+  toward Codex's line so it blends worse). **My GR standalone is plateaued at 15.25.**
 
-## Next levers (in priority order)
-1. **Proper windowed cross-correlation.** My 03 uses a noisy per-point nearest-GR
-   match (hence fold variance 13-18). The real geosteering method is a windowed
-   NCC with a small (shift, apparent-dip) search per window - I never actually
-   built this. It's the most likely standalone improvement.
-2. **Fold-3 diagnostic.** Fold 3 is the hardest fold for BOTH me (17.7) and Codex
-   (17.0). Figure out what's different about those 154 wells (geology? azimuth?
-   poor type-well overlap? long toes?). A fix there lifts everyone.
-3. Keep my model DIVERSE from Codex's (trees + GR inversion vs his linear/offset).
-   The blend gain depends on that divergence.
+## Next levers (honest assessment)
+My GR-inversion approach has plateaued (4 failed attempts). Realistic options:
+1. **Accept the diverse-model role.** My 03 contributes ~0.31 weight to the blend;
+   the blend improves as Codex improves. That may be my best contribution.
+2. **A genuinely different model family** I have not tried (e.g. a 1-D CNN over the
+   GR sequence, if a DL stack is available) - only worth it if it's truly diverse
+   from both 03 and Codex.
+3. **Codex's line is the stronger horse** (14.14, improving). Higher joint EV may
+   be helping review/improve Codex than squeezing my standalone.
+4. Fold 3 stays hardest for both; Codex's diagnostic: error tracks true |dTVT|
+   (large excursions), and neighbor priors did NOT fix it (my 08 made fold 3
+   worse). Genuinely hard wells.
 
 ## How to run
 ```
