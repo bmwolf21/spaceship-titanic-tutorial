@@ -12,19 +12,25 @@ Every project here is approached from **three angles**:
 3. **Translate** - take the challenges/solutions and apply them to a
    wildlife/environmental problem (`wildlife_translation/` in each project).
 
-## Featured tutorial
+## Featured tutorials
 
-**[Spaceship Titanic: An Honest, End-to-End Tutorial](spaceship-titanic/README.md)**
-walks through a full tabular Kaggle competition (final public score 0.805, about
-top third of 1,931 teams) and then re-applies the entire workflow to a wildlife
-species-detection problem in R. Start there. A [runnable notebook](spaceship-titanic/notebooks/spaceship_titanic_tutorial.ipynb)
-and the reproducible [scripts](spaceship-titanic/src/) are included.
+Each project is a full "how we solved it" walkthrough that then re-applies the
+same workflow to a wildlife problem in R.
+
+- **[Spaceship Titanic: An Honest, End-to-End Tutorial](spaceship-titanic/README.md)**
+  (binary classification). Public score 0.805, about top third of 1,931 teams,
+  translated to a species-detection problem with spatial-block CV. Includes a
+  [runnable notebook](spaceship-titanic/notebooks/spaceship_titanic_tutorial.ipynb).
+- **[House Prices: Regression, Honestly](house-prices/TUTORIAL.md)** (regression).
+  Public score 0.12333, top 22% of 4,596 teams, translated to an animal-density
+  regression that reproduces the linear-plus-tree blending gain.
 
 ## Projects
 
 | Project | Type | Status | Wildlife analogue |
 |---------|------|--------|-------------------|
 | [spaceship-titanic](spaceship-titanic/) | Binary classification | All 3 angles complete (LB 0.80547, ~top 33%) | Species detection with spatial-block CV |
+| [house-prices](house-prices/) | Regression | All 3 angles complete (LB 0.12333, ~top 22%) | Animal-density regression with structural-NA handling |
 
 ## Environment
 
