@@ -15,13 +15,22 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 
-# ---- path switch: Kaggle vs local ----
-KAGGLE = "/kaggle/input/rogii-wellbore-geology-prediction"
-if os.path.isdir(KAGGLE):
-    INPUT, OUT = KAGGLE, "/kaggle/working"
-else:
-    HERE = os.path.dirname(os.path.abspath(__file__))
-    INPUT, OUT = os.path.join(HERE, "data", "raw"), HERE
+# ---- path switch: Kaggle vs local (robust: find the dir that holds the data) ----
+def _find_input():
+    if os.path.isdir("/kaggle/input"):
+        print("kaggle input dirs:", sorted(os.listdir("/kaggle/input")))
+        # data may be at /kaggle/input/<slug> or /kaggle/input/competitions/<slug>
+        for pat in ("/kaggle/input/*", "/kaggle/input/*/*"):
+            for d in sorted(glob.glob(pat)):
+                if (os.path.isdir(d) and os.path.exists(os.path.join(d, "sample_submission.csv"))
+                        and os.path.isdir(os.path.join(d, "train"))):
+                    return d, "/kaggle/working"
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, "data", "raw"), here
+
+
+INPUT, OUT = _find_input()
+print("INPUT =", INPUT)
 TRAIN_DIR = os.path.join(INPUT, "train")
 TEST_DIR = os.path.join(INPUT, "test")
 SAMPLE = os.path.join(INPUT, "sample_submission.csv")

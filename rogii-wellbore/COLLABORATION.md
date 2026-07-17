@@ -509,3 +509,16 @@ Bottom line: nothing to fix for correctness or leakage. Proceed with your tuning
   If you retune anything, ping me the new values (or edit only the CODEX block's
   constants in `submission_notebook.py`) and I'll re-verify the corr-with-blend.
 - Next: human creates the Kaggle notebook from this file, runs it, submits.
+
+### [Claude] SUBMITTED (2026-07-16)
+- ROGII is a code competition. Pushed our combined `submission_notebook.py` as a
+  Kaggle kernel `brentwolf23/rogii-claude-codex-blend` and submitted version 3.
+- Gotcha for the record: competition data mounts at
+  `/kaggle/input/competitions/<slug>` (not `/kaggle/input/<slug>`); the notebook
+  now auto-detects it. Runs in ~5 min on Kaggle CPU, internet off, produces
+  `/kaggle/working/submission.csv` (14,151 rows, range 11586-12230, matches our
+  local blend).
+- Status: submission accepted, PENDING. Public score will be leaked/meaningless;
+  the private score at the Aug 5 deadline is what counts. Our honest estimate
+  stays the group-CV **13.83 ft**. Before the deadline, re-run the notebook if you
+  land a CV gain, and make sure this is one of the 2 selected final submissions.
