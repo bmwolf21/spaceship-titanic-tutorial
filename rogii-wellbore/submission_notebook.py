@@ -1,11 +1,11 @@
 """
-ROGII Wellbore Geology Prediction - Claude+Codex blended submission notebook.
+ROGII Wellbore Geology Prediction - blended submission notebook.
 
 Self-contained: paste into a Kaggle Notebook (attach the competition data), run,
 and it writes /kaggle/working/submission.csv. Also runs locally against
 data/raw for validation. Blends two independent pipelines:
-  - Claude: GR-correlation + LightGBM on dTVT
-  - Codex : geometry anchor + ridge + fold-safe offset/residual priors
+  - Pipeline A: GR-correlation + LightGBM on dTVT
+  - Pipeline B: geometry anchor + ridge + fold-safe offset/residual priors
 Both train on ALL train wells and predict whatever test wells are present, so it
 works when Kaggle reruns it on the hidden test set.
 """
@@ -34,10 +34,10 @@ print("INPUT =", INPUT)
 TRAIN_DIR = os.path.join(INPUT, "train")
 TEST_DIR = os.path.join(INPUT, "test")
 SAMPLE = os.path.join(INPUT, "sample_submission.csv")
-W_CLAUDE = 0.30                     # OOF-tuned blend weight (rest -> Codex)
+W_GR = 0.30                     # OOF-tuned blend weight (rest -> pipeline B)
 
 # =====================================================================
-# CLAUDE pipeline: GR-correlation + LightGBM (from claude/src/03)
+# PIPELINE A: GR-correlation + LightGBM
 # =====================================================================
 SHIFTS = np.arange(-40.0, 40.001, 0.5)
 
@@ -54,7 +54,7 @@ def _implied(gr_pt, ref_tvt, ref_gr, tvt_ps):
     return SHIFTS[np.argmin(np.abs(grid[None, :] - gr_pt[:, None]), axis=1)]
 
 
-def _claude_feats(hz, tw, is_train):
+def _gr_feats(hz, tw, is_train):
     ps = np.where(hz["TVT_input"].notna().values)[0].max()
     tvt_ps = float(hz["TVT_input"].iloc[ps])
     md_ps, z_ps = float(hz["MD"].iloc[ps]), float(hz["Z"].iloc[ps])
@@ -88,20 +88,20 @@ def _load(split_dir, wid):
     return hz, tw
 
 
-def claude_predict(train_ids, test_ids):
-    train = pd.concat([_claude_feats(*_load(TRAIN_DIR, w), True) for w in train_ids], ignore_index=True)
+def predict_gr(train_ids, test_ids):
+    train = pd.concat([_gr_feats(*_load(TRAIN_DIR, w), True) for w in train_ids], ignore_index=True)
     feats = [c for c in train.columns if c not in {"well_id", "row_index", "dtvt"}]
     model = lgb.LGBMRegressor(objective="regression", n_estimators=1200, learning_rate=0.03,
                               num_leaves=63, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
                               min_child_samples=200, reg_lambda=2.0, random_state=42, verbose=-1, n_jobs=-1)
     model.fit(train[feats], train["dtvt"])
-    test = pd.concat([_claude_feats(*_load(TEST_DIR, w), False) for w in test_ids], ignore_index=True)
+    test = pd.concat([_gr_feats(*_load(TEST_DIR, w), False) for w in test_ids], ignore_index=True)
     pred = model.predict(test[feats]) + test["tvt_ps"].values
-    return pd.DataFrame({"well_id": test["well_id"], "row_index": test["row_index"], "claude": pred})
+    return pd.DataFrame({"well_id": test["well_id"], "row_index": test["row_index"], "gr": pred})
 
 
 # =====================================================================
-# CODEX pipeline (verbatim from codex/train_predict.py, credit: Codex)
+# PIPELINE B: geometry anchor + ridge + fold-safe offset/residual priors
 # =====================================================================
 from dataclasses import dataclass
 
@@ -145,7 +145,7 @@ def safe_polyfit_slope(x, y, default):
     return float(np.polyfit(x, y, 1)[0])
 
 
-def cx_build(well_id, split_dir, include_target):
+def geo_build(well_id, split_dir, include_target):
     horiz = pd.read_csv(os.path.join(split_dir, f"{well_id}__horizontal_well.csv"))
     typewell = pd.read_csv(os.path.join(split_dir, f"{well_id}__typewell.csv"))
     ps = int(horiz["TVT_input"].notna().sum())
@@ -243,7 +243,7 @@ def fit_ridge(wells, ridge):
     return np.linalg.solve(xs.T @ xs + pen, xs.T @ resid), mu, sd
 
 
-def cx_predict(well, coef, mu, sd):
+def geo_predict(well, coef, mu, sd):
     x = well.x.copy(); x[:, 1:] = (x[:, 1:] - mu) / sd
     return well.base + x @ coef
 
@@ -252,11 +252,11 @@ def scale_from_ps(well, pred, s):
     return well.tvt0 + s * (pred - well.tvt0)
 
 
-def codex_predict(train_ids, test_ids):
+def predict_geo(train_ids, test_ids):
     RIDGE, KS, WS, SCALE = 1000.0, [10, 60], [0.52, 0.48], 0.92
     RK, RA, RAZ = 10, 0.435, 2.0
-    train = {w: cx_build(w, TRAIN_DIR, True) for w in train_ids}
-    test = {w: cx_build(w, TEST_DIR, False) for w in test_ids}
+    train = {w: geo_build(w, TRAIN_DIR, True) for w in train_ids}
+    test = {w: geo_build(w, TEST_DIR, False) for w in test_ids}
     pool = list(train.values())
     tr_pred = {w: np.zeros(len(train[w].row_index)) for w in train_ids}
     te_pred = {w: np.zeros(len(test[w].row_index)) for w in test_ids}
@@ -264,15 +264,15 @@ def codex_predict(train_ids, test_ids):
         tw = [with_offset(train[w], pool, k) for w in train_ids]
         coef, mu, sd = fit_ridge(tw, RIDGE)
         for well in tw:
-            tr_pred[well.well_id] += wt * scale_from_ps(well, cx_predict(well, coef, mu, sd), SCALE)
+            tr_pred[well.well_id] += wt * scale_from_ps(well, geo_predict(well, coef, mu, sd), SCALE)
         for w in test_ids:
             wp = with_offset(test[w], pool, k)
-            te_pred[w] += wt * scale_from_ps(wp, cx_predict(wp, coef, mu, sd), SCALE)
+            te_pred[w] += wt * scale_from_ps(wp, geo_predict(wp, coef, mu, sd), SCALE)
     curves = {w: train[w].y - tr_pred[w] for w in train_ids}
     out = []
     for w in test_ids:
         pred = te_pred[w] + RA * residual_prior(test[w], pool, curves, RK, RAZ)
-        out.append(pd.DataFrame({"well_id": w, "row_index": test[w].row_index, "codex": pred}))
+        out.append(pd.DataFrame({"well_id": w, "row_index": test[w].row_index, "geo": pred}))
     return pd.concat(out, ignore_index=True)
 
 
@@ -286,10 +286,10 @@ def main():
     test_ids = sorted(sample["id"].str.rsplit("_", n=1).str[0].unique())
     print(f"train wells {len(train_ids)} | test wells {len(test_ids)}")
 
-    c = claude_predict(train_ids, test_ids)
-    x = codex_predict(train_ids, test_ids)
+    c = predict_gr(train_ids, test_ids)
+    x = predict_geo(train_ids, test_ids)
     b = c.merge(x, on=["well_id", "row_index"])
-    b["tvt"] = W_CLAUDE * b["claude"] + (1 - W_CLAUDE) * b["codex"]
+    b["tvt"] = W_GR * b["gr"] + (1 - W_GR) * b["geo"]
     b["id"] = b["well_id"] + "_" + b["row_index"].astype(str)
     sub = sample[["id"]].merge(b[["id", "tvt"]], on="id", how="left")
     assert sub["tvt"].notna().all(), "missing predictions"
